@@ -136,10 +136,22 @@ var container = document.querySelector(".container");
 
 var paused = false;
 
+speculate(function() {
+  sense('columns');
+  container.style.webkitFlexFlow = 'row';
+  sense('rows');
+  container.style.webkitFlexFlow = 'column';
+})
+
 document.onkeydown = function(event) {
   var char = String.fromCharCode(event.which);
   if (char == 'S') {
-    transitionThis(function() { container.style.webkitFlexFlow = isColumn ? "row" : "column"; });
+    if (isColumn) {
+      transitionThis(function() { container.style.webkitFlexFlow = 'row'}, 'columns', 'rows');
+    } else {
+      transitionThis(function() { container.style.webkitFlexFlow = 'column'}, 'rows', 'columns');
+    }
+    //transitionThis(function() { container.style.webkitFlexFlow = isColumn ? "row" : "column"; });
     isColumn = !isColumn;
     if (isColumn) {
       direction = "to"; 

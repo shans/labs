@@ -742,23 +742,43 @@ function positionListFromKeyframes(keyframes, element) {
   return positions;
 }
 
+var sense;
+
+function speculate(action) {
+  sense = function(state) {
+    transitionable.map(function(element) { 
+      ensureCopy(element, state)
+    });
+  }
+  action();
+  sense = undefined;
+}
+
 /**
  * Run the provided action, capturing transitioning element position before and after,
  * then generate an animation to smooth the position change for transitioning elements.
  */
-function transitionThis(action) {
+function transitionThis(action, cachedFrom, cachedTo) {
   // construct transition tree  
   var tree = buildTree(transitionable);
   
   // record positions before action
-  transitionable.map(function(element) { ensureCopy(element, '_transitionBefore'); });
+  if (cachedFrom) {
+    transitionable.map(function(element) { aliasCopy(element, cachedFrom, '_transitionBefore'); });
+  } else {
+    transitionable.map(function(element) { ensureCopy(element, '_transitionBefore'); });
+  }
 
   // move to new position
   action();
 
   // record positions after action
   transitionable.map(function(element) {
-    ensureCopy(element, '_transitionAfter'); 
+    if (cachedTo) {
+      aliasCopy(element, cachedTo, '_transitionAfter');
+    } else {
+      ensureCopy(element, '_transitionAfter'); 
+    }
     element.style.opacity = '0';
     showCopy(element, '_transitionBefore');
   });
@@ -912,6 +932,11 @@ function ensureCopy(element, state) {
     return;
   }
   generateCopy(element, state);
+}
+
+function aliasCopy(element, state, alias) {
+  setPosition(element, getPosition(element, state), alias);
+  cacheCopy(element, alias, getCopy(element, state));
 }
 
 /**
