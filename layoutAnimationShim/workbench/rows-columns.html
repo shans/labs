@@ -40,14 +40,16 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce vel condimentum e
   Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce vel condimentum est. Donec mattis porta lorem, et tempus neque gravida vitae. Vivamus vehicula luctus hendrerit. Quisque porta, mi at volutpat mollis, massa arcu vehicula tortor, quis tempus felis leo non velit. Nulla pharetra interdum mauris nec egestas. Praesent quis lacus in est consectetur consectetur facilisis nec ligula. Mauris a quam velit. Suspendisse egestas nisl ac ante mollis malesuada sit amet vitae mi. Duis id placerat nisl. Ut iaculis urna eget tellus sollicitudin ac ornare lorem mollis.
     </div>
   </div>
-  <!--
-  <div>
+  <div class='panel'>
+    <div class='panelText'>
   Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce vel condimentum est. Donec mattis porta lorem, et tempus neque gravida vitae. Vivamus vehicula luctus hendrerit. Quisque porta, mi at volutpat mollis, massa arcu vehicula tortor, quis tempus felis leo non velit. Nulla pharetra interdum mauris nec egestas. Praesent quis lacus in est consectetur consectetur facilisis nec ligula. Mauris a quam velit. Suspendisse egestas nisl ac ante mollis malesuada sit amet vitae mi. Duis id placerat nisl. Ut iaculis urna eget tellus sollicitudin ac ornare lorem mollis.
+    </div>
   </div>
-  <div>
+  <div class='panel'>
+    <div class='panelText'>
   Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce vel condimentum est. Donec mattis porta lorem, et tempus neque gravida vitae. Vivamus vehicula luctus hendrerit. Quisque porta, mi at volutpat mollis, massa arcu vehicula tortor, quis tempus felis leo non velit. Nulla pharetra interdum mauris nec egestas. Praesent quis lacus in est consectetur consectetur facilisis nec ligula. Mauris a quam velit. Suspendisse egestas nisl ac ante mollis malesuada sit amet vitae mi. Duis id placerat nisl. Ut iaculis urna eget tellus sollicitudin ac ornare lorem mollis.
+    </div>
   </div>
-  -->
 </div>
 
 <form>
@@ -141,6 +143,7 @@ speculate(function() {
   container.style.webkitFlexFlow = 'row';
   sense('rows');
   container.style.webkitFlexFlow = 'column';
+  generate('midpoint', 'columns', 'rows', 'to', 0.5);
 })
 
 document.onkeydown = function(event) {

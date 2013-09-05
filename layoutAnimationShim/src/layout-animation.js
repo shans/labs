@@ -91,6 +91,7 @@ function animationToPositionLayout(target, from, positions, duration) {
 
   // Copy (some) style from initial state to final state. This tries to capture CSS transitions.
   // TODO: This no longer seems to work. Either get it working again for transitions or remove it.
+  /*
   sourceStyle = window.getComputedStyle(from);
   targetStyle = window.getComputedStyle(target);
   for (var i = 0; i < targetStyle.length; i++) {
@@ -103,9 +104,9 @@ function animationToPositionLayout(target, from, positions, duration) {
       }
     }
   }
+  */
 
-  return new Animation(from, toOffsetAPI({position: ["absolute", "absolute"],
-                                transform: cssList,
+  return new Animation(from, toOffsetAPI({transform: cssList,
                                 width: mkPosList('width', positions), 
                                 height: mkPosList('height', positions)}), 
                        timing);
@@ -181,8 +182,7 @@ function animationToPositionNone(target, from, positions, timing) {
 
   timing = timingForDuration(timing);
   
-  var a = new Animation(from, toOffsetAPI({transform: cssList,
-                                position: ["absolute", "absolute"]}), timing);
+  var a = new Animation(from, toOffsetAPI({transform: cssList}), timing);
   return a;
 }
 
@@ -205,7 +205,7 @@ function animationToPositionClip(target, from, positions, timing) {
     return { offset: position.offset, value: str };
   });
 
-  return new Animation(from, toOffsetAPI({transform: cssList, clip: clipList, position: ["absolute", "absolute"]}), timing);
+  return new Animation(from, toOffsetAPI({transform: cssList, clip: clipList}), timing);
 }
 
 var offsetRE = /^[0-9.]*\%?$/
@@ -643,7 +643,20 @@ function v(s) {
  * by removing the contribution from borders, padding, and margins.
  */
 function boundingRectToContentRect(element, rect) {
-  var style = window.getComputedStyle(element);
+  if (element._boundingRectCache) {
+    var style = element._boundingRectCache;
+  } else {
+    // TODO: It's possible that these values might change. How do we cache these but blow away the
+    // cache when it makes sense to?
+    var style = window.getComputedStyle(element);
+    element._boundingRectCache = {
+	borderLeftWidth: style.borderLeftWidth, borderRightWidth: style.borderRightWidth,
+	borderTopWidth: style.borderTopWidth, borderBottomWidth: style.borderBottomWidth, 
+	paddingLeft: style.paddingLeft, paddingRight: style.paddingRight,
+	paddingTop: style.paddingTop, paddingBottom: style.paddingBottom,
+	marginLeft: style.marginLeft, marginTop: style.marginTop
+    };
+  }
   var width = rect.width - v(style.borderLeftWidth) - v(style.borderRightWidth) - v(style.paddingLeft) - v(style.paddingRight);
   var height = rect.height - v(style.borderTopWidth) - v(style.borderBottomWidth) - v(style.paddingTop) - v(style.paddingBottom);
   var left = rect.left - v(style.marginLeft);
@@ -691,7 +704,7 @@ function removeTree() {
  * using the recorded _transitionBefore and _transitionAfter states
  * as reference positions.
  */
-function positionListFromKeyframes(keyframes, element) {
+function positionListFromKeyframes(keyframes, element, from, to) {
   var positions = keyframes.slice();
   positions.sort(function(a, b) {
     if (a.offset > b.offset) {
@@ -709,8 +722,8 @@ function positionListFromKeyframes(keyframes, element) {
     throw "NoOffsetAt1";
   }
 
-  var before = element._transitionBefore;
-  var after = element._transitionAfter;
+  var before = from ? from : element._transitionBefore;
+  var after = to ? to : element._transitionAfter;
 
   var properties = ["left", "top", "width", "height"];
 
@@ -743,15 +756,39 @@ function positionListFromKeyframes(keyframes, element) {
 }
 
 var sense;
+var generate;
 
+// TODO: Generate snapshots for sizes only - ignore position
+// TODO: Store snapshots by size rather than state
 function speculate(action) {
   sense = function(state) {
     transitionable.map(function(element) { 
       ensureCopy(element, state)
     });
   }
+
+  generate = function(name, from, to, keyframes, offset) {
+    transitionable.map(function(element) {
+      var fromPos = getPosition(element, from);
+      var toPos = getPosition(element, to);
+      var positions = positionListFromKeyframes(layoutKeyframes[keyframes], element, fromPos, toPos);
+      for (var i = 0; i < positions.length; i++) {
+	if (positions[i].offset == offset) {
+	  generateCopyAtPosition(element, positions[i], name);
+	  if (!element._sizeCache) {
+	    element._sizeCache = {};
+	  }
+	  element._sizeCache[positions[i].width + "_" + positions[i].height] = name;
+	  break;
+	}
+      }
+    });
+  }
+
   action();
+
   sense = undefined;
+  generate = undefined;
 }
 
 /**
@@ -897,25 +934,31 @@ function generateCopy(element, state) {
  * and caches both under the provided state name.
  */
 function generateCopyAtPosition(element, rect, state) {
-  var fromPosition = boundingRectToContentRect(element, rect);
+  if (element._sizeCache && element._sizeCache[rect.width + "_" + rect.height]) {
+    var from = getCopy(element, element._sizeCache[rect.width + "_" + rect.height]);
+  } else {
+    var fromPosition = boundingRectToContentRect(element, rect);
 
-  // Add contribution from nearest relative/absolute ancestor,
-  // if this is a child transition.
-  // TODO: Do we still need this? 
-  if (element._transitionParent) {
-    var parent = element.parentElement;
-    while (parent && !parent._layout) {
-      var style = getComputedStyle(parent);
-      if (style.position == "relative" || style.position == "absolute") {
-        fromPosition.left += parent.offsetLeft;
-        fromPosition.top += parent.offsetTop;
+    // Add contribution from nearest relative/absolute ancestor,
+    // if this is a child transition.
+    // TODO: Do we still need this? 
+    if (element._transitionParent) {
+      var parent = element.parentElement;
+      while (parent && !parent._layout) {
+	var style = getComputedStyle(parent);
+	if (style.position == "relative" || style.position == "absolute") {
+	  fromPosition.left += parent.offsetLeft;
+	  fromPosition.top += parent.offsetTop;
+	}
+	parent = parent.parentElement;
       }
-      parent = parent.parentElement;
-    }
    
-  }
+    }
 
-  var from = cloneElementToSize(element, fromPosition);
+    setPosition(element, fromPosition, state + '_br');
+
+    var from = cloneElementToSize(element, fromPosition);
+  }
 
   setPosition(element, rect, state);
   from.label = state;

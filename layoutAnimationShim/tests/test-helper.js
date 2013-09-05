@@ -18,16 +18,20 @@ function at(time, test, message) {
       players[i].playbackRate = 0;
     }
     var div = document.createElement('div');
+    log = document.createElement('div');
+    log.appendChild(div);
     try {
       test();
       if (!errored) {
         div.innerHTML = '<span class="pass">PASS</span>: ' + message + '<br>';
+      } else {
+	div.innerHTML = '<span class="error">FAIL</span>: ' + message + '<br>';
       }
     } catch (e) {
       div.innerHTML = '<span class="error">EXCEPTION</span>: ' + message + ': ' +
           e.toString() + '<br>' + e.stack;
     }
-    log.appendChild(div);
+    rootLog.appendChild(log);
   });
 }
 
@@ -35,13 +39,17 @@ var style = document.createElement('style');
 document.documentElement.appendChild(style);
 var log = document.createElement('div');
 document.documentElement.appendChild(log);
+var rootLog = log;
 
 var styleText =
   '.error {' +
   '  color: red;' +
-  '} ' +
+  '}' +
   '.pass {' +
   '  color: green;' +
+  '}' +
+  '.check {' +
+  '  margin-left: 30px;' +
   '}';
 
 style.textContent = styleText;
@@ -51,6 +59,7 @@ var errored = false;
 function check(cond, message) {
   if (!cond) {
     var div = document.createElement('div');
+    div.classList.add('check');
     div.innerHTML = '<span class="error">FAIL</span>: ' + message + '<br>';
     errored = true;
     log.appendChild(div);
@@ -135,7 +144,7 @@ function strToMtrx(str) {
 function forEachVisibleCopy(element, f) {
   var copies = getCopiesInPlay(element);
   var visibleCopies = dictFilter(copies, function(copy) {
-    return copy.style.opacity != '0';
+    return getComputedStyle(copy).opacity != '0';
   });
 
   dictForEach(visibleCopies, function(copy, position) {
@@ -219,15 +228,14 @@ function checkLayoutOpacity(element) {
   }
 
   // TODO: sort names list according to effect order
-
-  checkEquals(copies['_transitionBefore'].style.opacity, opacities[0],
+  checkEquals(getComputedStyle(copies['_transitionBefore']).opacity, opacities[0],
     'before state opacity mismatch');
   for (var i = 1; i < opacities.length - 1; i++) {
-    checkEquals(copies[names[i -1]].style.opacity, opacities[i], 
+    checkEquals(getComputedStyle(copies[names[i -1]]).opacity, opacities[i], 
       'state ' + names[i - 1] + ' opacity mismatch')
   }
   if (opacities.length > 1) {
-    checkEquals(copies['_transitionAfter'].style.opacity, opacities[opacities.length - 1],
+    checkEquals(getComputedStyle(copies['_transitionAfter']).opacity, opacities[opacities.length - 1],
       'after state opacity mismatch');
   }
 }
